@@ -134,12 +134,13 @@ extension CodeScannerView {
             button.translatesAutoresizingMaskIntoConstraints = false
             return button
         }()
-
+        
         override public func viewDidLoad() {
             super.viewDidLoad()
             self.addOrientationDidChangeObserver()
             self.setBackgroundColor()
             self.handleCameraPermission()
+            self.addPinch()
         }
 
         override public func viewWillLayoutSubviews() {
@@ -289,7 +290,33 @@ extension CodeScannerView {
                 imageView.heightAnchor.constraint(equalToConstant: 200),
             ])
         }
+        
+        private func addPinch() {
+            let pinch = UIPinchGestureRecognizer(target: self, action: #selector(viewPinched(recognizer:)))
+            view.addGestureRecognizer(pinch)
+            view.isUserInteractionEnabled = true
+        }
 
+        @objc private func viewPinched(recognizer: UIPinchGestureRecognizer) {
+            guard let device = parentView.videoCaptureDevice ?? fallbackVideoCaptureDevice else { return }
+            switch recognizer.state {
+                case .began:
+                    recognizer.scale = device.videoZoomFactor
+                case .changed:
+                    let scale = recognizer.scale
+                    do {
+                         try device.lockForConfiguration()
+                        device.videoZoomFactor = max(device.minAvailableVideoZoomFactor, min(scale, device.maxAvailableVideoZoomFactor))
+                        device.unlockForConfiguration()
+                    }
+                    catch {
+                        print(error)
+                    }
+                default:
+                    break
+            }
+        }
+        
         override public func viewDidDisappear(_ animated: Bool) {
             super.viewDidDisappear(animated)
 
@@ -429,7 +456,6 @@ extension CodeScannerView {
                 self.parentView.completion(.failure(reason))
             }
         }
-        
     }
 }
 
