@@ -91,7 +91,7 @@ extension CodeScannerView {
                 stackView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
             ])
         }
-
+        
         override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
             // Send back their simulated data, as if it was one of the types they were scanning for
             found(ScanResult(
@@ -400,7 +400,7 @@ extension CodeScannerView {
         }
         #endif
         
-        func updateViewController(isTorchOn: Bool, isGalleryPresented: Bool, isManualCapture: Bool, isManualSelect: Bool) {
+        func updateViewController(isTorchOn: Bool, isGalleryPresented: Bool, isManualCapture: Bool, isManualSelect: Bool, rectOfInterest: CGRect?) {
             guard let videoCaptureDevice = parentView.videoCaptureDevice ?? fallbackVideoCaptureDevice else {
                 return
             }
@@ -415,10 +415,22 @@ extension CodeScannerView {
                 openGallery()
             }
             
-            #if !targetEnvironment(simulator)
+#if !targetEnvironment(simulator)
+            if let metadataOutput = captureSession?.outputs.first(where: { $0 is AVCaptureMetadataOutput }) as? AVCaptureMetadataOutput {
+                if let rectOfInterest {
+                    let rect = CGRect(x: (previewLayer.bounds.width - rectOfInterest.size.width) / 2.0,
+                                      y: (previewLayer.bounds.height - rectOfInterest.size.height) / 2.0,
+                                      width: rectOfInterest.size.width,
+                                      height: rectOfInterest.size.height)
+                    metadataOutput.rectOfInterest = previewLayer.metadataOutputRectConverted(fromLayerRect: rect)
+                } else {
+                    metadataOutput.rectOfInterest = previewLayer.bounds
+                }
+            }
+            
             showManualCaptureButton(isManualCapture)
             showManualSelectButton(isManualSelect)
-            #endif
+#endif
         }
         
         public func reset() {
